@@ -99,40 +99,31 @@
     padding: 0;
 }
 
-html {
-    width: 360px;
-    height: 560px;
+html, body {
+    width: 100%;
+    height: 100vh;
     margin: 0;
     padding: 0;
-    overflow: hidden;
-}
-
-body {
-    width: 360px;
-    max-width: 360px;
-    height: 560px;
-    max-height: 560px;
-    margin: 0;
-    padding: 0;
+    overflow-x: hidden;
+    overflow-y: hidden;
     font-family: var(--font-stack);
     background-color: var(--bg-app);
     color: var(--text-main);
-    overflow: hidden;
     user-select: none;
-    box-sizing: border-box;
 }
 
 .app-container {
     position: relative;
-    width: 360px;
-    height: 560px;
-    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .view-slider {
     display: flex;
-    width: 360px;
-    height: 560px;
+    width: 100%;
+    height: 100%;
     transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -141,17 +132,17 @@ body {
 }
 
 .view-slider[data-active-view="autofill"] {
-    transform: translateX(-360px);
+    transform: translateX(-100%);
 }
 
 .view-slider[data-active-view="settings"] {
-    transform: translateX(-720px);
+    transform: translateX(-200%);
 }
 
 .view {
-    flex: 0 0 360px;
-    width: 360px;
-    height: 560px;
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     background-color: var(--bg-app);
@@ -168,9 +159,10 @@ body {
     padding-bottom: 8px;
     margin-bottom: 8px;
     border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
 }
 
-.brand {
+.brand, .header-actions {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -188,12 +180,6 @@ body {
 .brand-name {
     font-size: 14px;
     font-weight: 700;
-}
-
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
 }
 
 .icon-btn {
@@ -221,6 +207,7 @@ body {
     padding: 5px 10px;
     border-radius: var(--radius-md);
     margin-bottom: 8px;
+    width: 100%;
 }
 
 .chip-dot {
@@ -228,6 +215,7 @@ body {
     height: 6px;
     border-radius: 50%;
     background-color: var(--success);
+    flex-shrink: 0;
 }
 
 .chip-text {
@@ -237,10 +225,12 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    flex: 1;
 }
 
 .prompt-box {
     margin-bottom: 8px;
+    width: 100%;
 }
 
 .prompt-label {
@@ -255,6 +245,7 @@ body {
 
 textarea {
     width: 100%;
+    max-width: 100%;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     background-color: var(--bg-surface);
@@ -262,7 +253,7 @@ textarea {
     font-family: inherit;
     font-size: 12px;
     padding: 8px 10px;
-    resize: none;
+    resize: vertical;
     outline: none;
 }
 
@@ -369,6 +360,8 @@ textarea:focus {
     border-radius: var(--radius-md);
     padding: 10px;
     margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
 }
 
 .activity-header {
@@ -390,6 +383,7 @@ textarea:focus {
     font-weight: 700;
     padding: 2px 5px;
     border-radius: 4px;
+    flex-shrink: 0;
 }
 
 .activity-label {
@@ -414,7 +408,7 @@ textarea:focus {
     margin-top: 8px;
     padding-top: 8px;
     border-top: 1px solid var(--border-subtle);
-    max-height: 90px;
+    max-height: 120px;
     overflow-y: auto;
 }
 
@@ -452,6 +446,7 @@ textarea:focus {
     padding: 2px 6px;
     border-radius: 4px;
     text-transform: uppercase;
+    flex-shrink: 0;
 }
 
 .action-detail {
@@ -470,6 +465,7 @@ textarea:focus {
     border-radius: 50%;
     animation: spin 0.65s linear infinite;
     display: inline-block;
+    flex-shrink: 0;
 }
 
 @keyframes spin {
@@ -486,11 +482,24 @@ textarea:focus {
     display: flex;
     flex-direction: column;
     gap: 3px;
+    width: 100%;
 }
 
 .form-row {
     display: flex;
     gap: 8px;
+    width: 100%;
+}
+
+@media (max-width: 350px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .profile-select-bar {
+        flex-wrap: wrap;
+    }
 }
 
 .flex-1 {
@@ -526,11 +535,14 @@ input:focus, select:focus {
 .app-footer, .settings-actions {
     margin-top: auto;
     display: flex;
+    width: 100%;
     gap: 8px;
+    padding-top: 16px;
 }
 
 .btn {
     flex: 1;
+    width: 100%;
     padding: 9px 12px;
     border-radius: var(--radius-md);
     font-size: 12px;
@@ -567,6 +579,7 @@ input:focus, select:focus {
     border-radius: var(--radius-sm);
     font-size: 11px;
     margin-bottom: 8px;
+    width: 100%;
 }
 
 .error-banner {

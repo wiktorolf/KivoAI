@@ -5,6 +5,10 @@ import { ActionValidator } from './agent/validator.js';
 import { TabCapture } from './browser/capture.js';
 import { AutofillProfileManager, EMPTY_PROFILE } from './privacy/profile.js';
 
+if (EMPTY_PROFILE && typeof EMPTY_PROFILE.password === 'undefined') {
+    EMPTY_PROFILE.password = '';
+}
+
 const viewMain = document.getElementById('viewMain');
 const viewSettings = document.getElementById('viewSettings');
 const viewAutofill = document.getElementById('viewAutofill');
@@ -40,6 +44,7 @@ const btnNewProfile = document.getElementById('btnNewProfile');
 const btnDeleteProfile = document.getElementById('btnDeleteProfile');
 const afProfileName = document.getElementById('afProfileName');
 const afUsername = document.getElementById('afUsername');
+const afPassword = document.getElementById('afPassword');
 const afFirstName = document.getElementById('afFirstName');
 const afMiddleName = document.getElementById('afMiddleName');
 const afLastName = document.getElementById('afLastName');
@@ -110,7 +115,7 @@ function clearError() {
 function addHistoryEntry(step, text) {
     const item = document.createElement('div');
     item.className = 'history-item';
-    item.textContent = `${step}. ${text}`;
+    item.textContent = `${step}.${text}`;
     actionHistoryList.appendChild(item);
     actionHistoryList.scrollTop = actionHistoryList.scrollHeight;
 }
@@ -383,44 +388,46 @@ function inPageExecutor(action) {
                 if (!el) return { success: false, reason: `Input target "${action.target || action.index}" not found.` };
 
                 const tag = el.tagName.toLowerCase();
-                const type = (el.getAttribute('type') || '').toLowerCase();
-
-                if (tag === 'input' && type === 'file') {
-                    return { success: false, reason: 'File input fields cannot be typed into via script.' };
+                if (tag === 'input' && (el.getAttribute('type') || '').toLowerCase() === 'file') {
+                    return { success: false, reason: 'File inputs cannot be typed into via script.' };
                 }
 
                 try { el.focus(); } catch (_) {}
+                el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+                el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+                el.click();
+
                 const textToType = String(action.text || '');
+                const newVal = action.clearFirst ? textToType : (el.value || '') + textToType;
+
+                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+
+                if (tag === 'textarea' && nativeTextAreaValueSetter) {
+                    nativeTextAreaValueSetter.call(el, newVal);
+                } else if (tag === 'input' && nativeInputValueSetter) {
+                    nativeInputValueSetter.call(el, newVal);
+                } else {
+                    el.value = newVal;
+                }
 
                 if (el.isContentEditable || el.getAttribute('contenteditable') === 'true') {
-                    el.innerText = action.clearFirst ? textToType : el.innerText + textToType;
-                    el.dispatchEvent(new InputEvent('input', { bubbles: true, data: textToType }));
-                    return { success: true, reason: `Typed into editable field "${action.target || action.index}".` };
+                    el.innerText = newVal;
                 }
 
-                if (tag === 'textarea' || el instanceof window.HTMLTextAreaElement) {
-                    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-                    if (setter) setter.call(el, action.clearFirst ? textToType : el.value + textToType);
-                    else el.value = action.clearFirst ? textToType : el.value + textToType;
-                    el.dispatchEvent(new Event('input', { bubbles: true }));
-                    el.dispatchEvent(new Event('change', { bubbles: true }));
-                    return { success: true, reason: `Typed into textarea "${action.target || action.index}".` };
+                el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+
+                if (textToType.length > 0) {
+                    const lastChar = textToType.slice(-1);
+                    el.dispatchEvent(new KeyboardEvent('keydown', { key: lastChar, bubbles: true, composed: true }));
+                    el.dispatchEvent(new KeyboardEvent('keypress', { key: lastChar, bubbles: true, composed: true }));
+                    el.dispatchEvent(new KeyboardEvent('keyup', { key: lastChar, bubbles: true, composed: true }));
                 }
 
-                if (tag === 'input' || el instanceof window.HTMLInputElement) {
-                    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-                    if (setter) setter.call(el, action.clearFirst ? textToType : el.value + textToType);
-                    else el.value = action.clearFirst ? textToType : el.value + textToType;
-                    el.dispatchEvent(new Event('input', { bubbles: true }));
-                    el.dispatchEvent(new Event('change', { bubbles: true }));
-                    return { success: true, reason: `Typed into input "${action.target || action.index}".` };
-                }
+                try { el.blur(); } catch (_) {}
 
-                if ('value' in el) el.value = action.clearFirst ? textToType : el.value + textToType;
-                else el.textContent = action.clearFirst ? textToType : el.textContent + textToType;
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-                return { success: true, reason: `Updated field "${action.target || action.index}".` };
+                return { success: true, reason: `Typed into field "${action.target || action.index}".` };
             }
 
             case 'select': {
@@ -459,9 +466,14 @@ function inPageExecutor(action) {
                 return { success: true, reason: `Waited ${action.duration}ms.` };
             }
 
-            case 'navigate': {
-                window.location.href = String(action.path);
-                return { success: true, reason: `Navigated to ${action.path}.` };
+            case 'history_back': {
+                window.history.back();
+                return { success: true, reason: `Navigated back one page.` };
+            }
+
+            case 'history_forward': {
+                window.history.forward();
+                return { success: true, reason: `Navigated forward one page.` };
             }
 
             case 'answer': {
@@ -702,8 +714,15 @@ async function runUnifiedLoop() {
 
             const validAction = validation.action;
 
-            if (validAction.action === 'type' && validAction.text) {
-                validAction.text = AutofillProfileManager.resolveTemplateLocally(validAction.text, profile);
+            if (profile) {
+                const replaceTokens = (str) => {
+                    if (typeof str !== 'string') return str;
+                    return str.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
+                        return typeof profile[key] !== 'undefined' ? String(profile[key]) : '';
+                    });
+                };
+                if (validAction.text) validAction.text = replaceTokens(validAction.text);
+                if (validAction.value) validAction.value = replaceTokens(validAction.value);
             }
 
             if (validAction.action === 'answer') {
@@ -724,6 +743,65 @@ async function runUnifiedLoop() {
                 addHistoryEntry(step, `Complete: ${validAction.message}`);
                 activityCurrentStep.textContent = validAction.message || getMessage('statusTaskFinished', 'Task finished!');
                 break;
+            }
+
+            const api = typeof browser !== 'undefined' ? browser : chrome;
+
+            const waitForTabLoad = (tabId) => {
+                return new Promise(resolve => {
+                    const listener = (tId, info) => {
+                        if (tId === tabId && info.status === 'complete') {
+                            api.tabs.onUpdated.removeListener(listener);
+                            resolve();
+                        }
+                    };
+                    api.tabs.onUpdated.addListener(listener);
+                    setTimeout(() => {
+                        api.tabs.onUpdated.removeListener(listener);
+                        resolve();
+                    }, 6000);
+                });
+            };
+
+            if (validAction.action === 'navigate') {
+                activityCurrentStep.textContent = getMessage('statusExecuting', ['navigate'], `Navigating to ${validAction.path}...`);
+                await api.tabs.update(activeTab.id, { url: validAction.path });
+                addHistoryEntry(step, `Navigated to ${validAction.path}`);
+                history.push(`navigate: Success`);
+                await waitForTabLoad(activeTab.id);
+                continue;
+            }
+
+            if (validAction.action === 'new_tab') {
+                activityCurrentStep.textContent = getMessage('statusExecuting', ['new_tab'], 'Opening new tab...');
+                const targetUrl = validAction.url || 'https://www.duckduckgo.com';
+                const newTab = await api.tabs.create({ url: targetUrl });
+                addHistoryEntry(step, `Opened new tab: ${targetUrl}`);
+                history.push(`new_tab: Success`);
+                await waitForTabLoad(newTab.id);
+                continue;
+            }
+
+            if (validAction.action === 'close_tab') {
+                activityCurrentStep.textContent = getMessage('statusExecuting', ['close_tab'], 'Closing tab...');
+                await api.tabs.remove(activeTab.id);
+                addHistoryEntry(step, `Closed current tab.`);
+                history.push(`close_tab: Success`);
+                await new Promise(r => setTimeout(r, 1000));
+                continue;
+            }
+
+            if (validAction.action === 'switch_tab') {
+                activityCurrentStep.textContent = getMessage('statusExecuting', ['switch_tab'], 'Switching tab...');
+                const tabs = await api.tabs.query({ currentWindow: true });
+                const targetIndex = typeof validAction.index === 'number' ? validAction.index : (activeTab.index + 1) % tabs.length;
+                const targetTab = tabs.find(t => t.index === targetIndex) || tabs[0];
+
+                await api.tabs.update(targetTab.id, { active: true });
+                addHistoryEntry(step, `Switched to tab ${targetIndex}.`);
+                history.push(`switch_tab: Success`);
+                await new Promise(r => setTimeout(r, 1000));
+                continue;
             }
 
             activityCurrentStep.textContent = getMessage('statusExecuting', [validAction.action], `Executing: ${validAction.action}...`);
@@ -772,6 +850,7 @@ function populateProfileFields(p) {
     currentLoadedProfileId = p.id;
     afProfileName.value = p.profileName || '';
     afUsername.value = p.username || '';
+    afPassword.value = p.password || '';
     afFirstName.value = p.firstName || '';
     afMiddleName.value = p.middleName || '';
     afLastName.value = p.lastName || '';
@@ -799,6 +878,7 @@ async function saveCurrentProfile(e) {
             id: currentLoadedProfileId || `profile_${Date.now()}`,
             profileName: afProfileName.value.trim() || 'My Profile',
             username: afUsername.value.trim(),
+            password: afPassword.value,
             firstName: afFirstName.value.trim(),
             middleName: afMiddleName.value.trim(),
             lastName: afLastName.value.trim(),

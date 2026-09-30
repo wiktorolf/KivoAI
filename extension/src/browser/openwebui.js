@@ -96,7 +96,6 @@ export class OpenWebUIClient {
                 signal: controller.signal
             });
 
-            // Endpoint fallback for alternative Open WebUI routing configurations
             if (res.status === 404) {
                 const altEndpoint = `${this.serverUrl}/api/audio/transcriptions`;
                 res = await fetch(altEndpoint, {
@@ -144,6 +143,10 @@ export class OpenWebUIClient {
             '2. OPERATIONAL GOALS / TASKS:',
             '   If the user provides an operational goal or task to perform on the page (e.g., "Sign in", "Fill shipping info", "Click search"):',
             '   -> Choose a DOM action ("click", "type", "select", "hover", "press_key", "scroll", "wait", "finish") to advance the goal.',
+            '3. BROWSER NAVIGATION & TAB CONTROL:',
+            '   - If the user says "open a new tab" OR "open a new page": Use "new_tab".',
+            '   - If the user says "go to [website]" or "navigate to" (without saying "new"): Use "navigate" to change the current tab.',
+            '   - To manage tabs/history: Use "switch_tab", "close_tab", "history_back", or "history_forward".',
             '',
             '### CRITICAL FORM & LOGIN RULES:',
             '1. DO NOT OVERWRITE FILLED FIELDS: If an input field already has text, shows "[FILLED]", or has user input, NEVER type into it unless explicitly asked to replace it.',
@@ -151,7 +154,8 @@ export class OpenWebUIClient {
             '3. AUTOFILL TEMPLATE TOKENS: When filling identity, contact, or address forms, use these symbolic placeholders (the browser replaces them locally with user data):',
             tokens,
             'Example: {"thought": "typing name", "action": "type", "index": 1, "text": "{{fullName}}"}',
-            'Example: {"thought": "typing address", "action": "type", "index": 2, "text": "{{address1}}"}',
+            'Example: {"thought": "typing email", "action": "type", "index": 2, "text": "{{email}}"}',
+            'Example: {"thought": "typing password", "action": "type", "index": 3, "text": "{{password}}"}',
             '4. INDEX ACCURACY: Always use the exact integer "index" from the elements list.',
             '',
             '### LANGUAGE RULE:',
@@ -161,10 +165,13 @@ export class OpenWebUIClient {
             '### OUTPUT JSON FORMAT:',
             '{',
             '  "thought": "brief reasoning (1-2 sentences)",',
-            '  "action": "answer" | "click" | "type" | "select" | "hover" | "press_key" | "scroll" | "wait" | "finish",',
-            '  "index": <integer index from list, if acting on element>,',
+            '  "action": "answer" | "click" | "type" | "select" | "hover" | "press_key" | "scroll" | "wait" | "navigate" | "new_tab" | "switch_tab" | "close_tab" | "history_back" | "history_forward" | "finish",',
+            '  "index": <integer index from list (for DOM actions) OR tab index (for switch_tab)>,',
             '  "text": "string to type (can include {{tokens}})",',
+            '  "value": "string to select in dropdowns",',
             '  "key": "Enter" | "Tab" | "Escape",',
+            '  "url": "https://example.com (optional, for new_tab)",',
+            '  "path": "https://example.com (for navigate)",',
             '  "message": "formatted markdown explanation (for \'answer\') OR completion summary (for \'finish\')"',
             '}',
             '',

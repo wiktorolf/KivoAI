@@ -7,6 +7,11 @@ export const ALLOWED_ACTIONS = Object.freeze({
     SCROLL: 'scroll',
     WAIT: 'wait',
     NAVIGATE: 'navigate',
+    HISTORY_BACK: 'history_back',
+    HISTORY_FORWARD: 'history_forward',
+    NEW_TAB: 'new_tab',
+    SWITCH_TAB: 'switch_tab',
+    CLOSE_TAB: 'close_tab',
     ANSWER: 'answer',
     FINISH: 'finish'
 });

@@ -126,9 +126,19 @@
                             <input type="text" id="afProfileName" required placeholder="e.g. Personal, Work, Alex" data-i18n-placeholder="phProfileName">
                         </div>
 
-                        <div class="form-group">
-                            <label for="afUsername" data-i18n="lblUsername">Username / User ID</label>
-                            <input type="text" id="afUsername" placeholder="e.g. jdoe99" data-i18n-placeholder="phUsername">
+                        <div class="form-row">
+                            <div class="form-group flex-1">
+                                <label for="afUsername" data-i18n="lblUsername">Username / User ID</label>
+                                <input type="text" id="afUsername" placeholder="e.g. jdoe99" data-i18n-placeholder="phUsername">
+                            </div>
+                            <div class="form-group flex-1">
+                                <label for="afPassword" data-i18n="lblPassword">Password</label>
+                                <input type="password" id="afPassword" placeholder="********"
+                                       autocomplete="new-password"
+                                       data-lpignore="true"
+                                       spellcheck="false"
+                                       data-i18n-placeholder="phPassword">
+                            </div>
                         </div>
 
                         <div class="form-row">

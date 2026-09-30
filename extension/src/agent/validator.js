@@ -51,6 +51,35 @@ export class ActionValidator {
         }
 
         switch (actionType) {
+            case ALLOWED_ACTIONS.NEW_TAB: {
+                if (action.url === null) {
+                    delete action.url;
+                } else if (action.url !== undefined && typeof action.url !== 'string') {
+                    action.url = String(action.url);
+                }
+
+                if (action.url) {
+                    action.url = action.url.trim();
+                    if (!/^https?:\/\//i.test(action.url) && !action.url.startsWith('about:')) {
+                        action.url = 'https://' + action.url;
+                    }
+                }
+                return { isValid: true, action };
+            }
+
+            case ALLOWED_ACTIONS.SWITCH_TAB: {
+                if (action.index !== undefined && (typeof action.index !== 'number' || !Number.isInteger(action.index))) {
+                    return { isValid: false, error: '"switch_tab" requires "index" to be an integer if provided.' };
+                }
+                return { isValid: true, action };
+            }
+
+            case ALLOWED_ACTIONS.CLOSE_TAB:
+            case ALLOWED_ACTIONS.HISTORY_BACK:
+            case ALLOWED_ACTIONS.HISTORY_FORWARD: {
+                return { isValid: true, action };
+            }
+
             case ALLOWED_ACTIONS.ANSWER: {
                 if (!action.message || typeof action.message !== 'string' || action.message.trim().length === 0) {
                     return { isValid: false, error: '"answer" action requires a non-empty "message" string.' };
@@ -147,7 +176,7 @@ export class ActionValidator {
 
                 const parsedAmount = parseInt(action.amount, 10);
                 if (isNaN(parsedAmount)) {
-                    action.amount = 400; // sensible fallback
+                    action.amount = 400;
                 } else {
                     action.amount = Math.min(
                         Math.max(parsedAmount, ACTION_CONSTRAINTS.MIN_SCROLL),
@@ -171,10 +200,21 @@ export class ActionValidator {
             }
 
             case ALLOWED_ACTIONS.NAVIGATE: {
-                if (!action.path || typeof action.path !== 'string' || action.path.trim().length === 0) {
+                if (action.path === null) {
+                    delete action.path;
+                } else if (action.path !== undefined && typeof action.path !== 'string') {
+                    action.path = String(action.path);
+                }
+
+                if (!action.path || action.path.trim().length === 0) {
                     return { isValid: false, error: '"navigate" requires a non-empty "path" or URL string.' };
                 }
+
                 action.path = action.path.trim();
+
+                if (!/^https?:\/\//i.test(action.path) && !action.path.startsWith('about:')) {
+                    action.path = 'https://' + action.path;
+                }
                 return { isValid: true, action };
             }
 

@@ -4,6 +4,7 @@ export const EMPTY_PROFILE = {
     id: '',
     profileName: '',
     username: '',
+    password: '',
     firstName: '',
     middleName: '',
     lastName: '',
